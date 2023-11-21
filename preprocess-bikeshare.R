@@ -15,9 +15,3 @@ bike[, registered := NULL]
 bike[, casual := NULL]
 
 saveRDS(bike, "bike.rds")
-
-
-library(mlr3pipelines)
-penc <- po("encode", method = "one-hot")
-
-penc$train(bike)
