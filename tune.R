@@ -18,7 +18,7 @@ tuned_rpf <- auto_tuner(
   learner = lrn("regr.rpf", ntrees = 200),
   resampling = inner_resampling,
   terminator = terminator,
-  measure = msr("regr.rmsle"),
+  measure = msr("regr.rmse"),
   search_space = ps(
     max_interaction = p_int(2, length(biketask$feature_names)),
     splits = p_int(10, 1000),
@@ -35,7 +35,7 @@ tuned_xgb <- auto_tuner(
     po("learner", lrn("regr.xgboost")) |>
     as_learner(id = "xgboost"),
   resampling = inner_resampling,
-  measure = msr("rmsle"),
+  measure = msr("regr.rmse"),
   terminator = terminator,
   search_space = ps(
     regr.xgboost.max_depth = p_int(2, length(biketask$feature_names)),
