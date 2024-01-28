@@ -1,4 +1,4 @@
-pak::pak(c("xgboost", "mlr3verse", "mlr-org/mlr3extralearners", "PlantedML/randomPlantedForest"))
+pak::pak(c("mlr3verse", "mlr-org/mlr3extralearners", "PlantedML/randomPlantedForest"))
 
 library(mlr3verse)
 library(mlr3extralearners)
@@ -11,11 +11,11 @@ length(biketask$feature_names)
 terminator <- trm("evals", n_evals = 500, k = 0)
 inner_resampling <- rsmp("cv", folds = 3)
 #tuner <- tnr("mbo")
-tuner <- tnr("random_search", batch_size = 10)
+tuner <- tnr("random_search", batch_size = 5)
 
 tuned_rpf <- auto_tuner(
   tuner = tuner,
-  learner = lrn("regr.rpf", ntrees = 200),
+  learner = lrn("regr.rpf", ntrees = 200, nthreads = 2),
   resampling = inner_resampling,
   terminator = terminator,
   measure = msr("regr.rmse"),
@@ -29,7 +29,7 @@ tuned_rpf <- auto_tuner(
   store_benchmark_result = TRUE
 )
 
-future::plan("multisession", workers = 30)
+future::plan("multisession", workers = 10)
 
 tuned_rpf$train(biketask)
 tuned_rpf$tuning_instance$result
