@@ -1,4 +1,5 @@
-pak::pak(c("xgboost", "mlr3verse", "mlr3mbo", "mlr3tuning"))
+pak::pak("xgboost")
+pak::pak(c("mlr3verse", "mlr3mbo", "mlr-org/mlr3extralearners"))
 pak::pak(c("DiceKriging", "rgenoud"))
 
 library(mlr3verse)
