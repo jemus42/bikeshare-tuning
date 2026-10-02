@@ -1,3 +1,5 @@
+source("rv/scripts/rvr.R")
+source("rv/scripts/activate.R")
 # For e.g. XGBoost
 Sys.setenv(OMP_NUM_THREADS = 1)
 Sys.setenv(OMP_THREAD_LIMIT = 1)

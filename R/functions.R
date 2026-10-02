@@ -33,7 +33,7 @@ make_task_xgb <- function(bike) {
   as_task_regr(model.matrix(~ -1 + ., bike), target = "bikers", id = "bikeshare_xgb")
 }
 
-tune_xgb <- function(task, n_evals = 500, workers = 4) {
+tune_xgb <- function(task, n_evals = 500, workers = parallelly::availableCores(omit = 1)) {
   learner <- lrn(
     "regr.xgboost",
     early_stopping_rounds = 50,
@@ -51,18 +51,23 @@ tune_xgb <- function(task, n_evals = 500, workers = 4) {
   set_validate(learner, "test")
 
   tuned <- auto_tuner(
-    tuner = tnr("mbo"),
+    # Batch MBO proposes one point at a time; async keeps all workers busy
+    tuner = tnr("async_mbo"),
     learner = learner,
     resampling = rsmp("cv", folds = 3),
     measure = msr("regr.mse"),
     terminator = trm("evals", n_evals = n_evals, k = 0),
     store_tuning_instance = TRUE,
-    store_benchmark_result = TRUE
+    store_benchmark_result = TRUE,
+    # Async archive lives in Redis; freeze it so the stored target is self-contained
+    callbacks = clbk("mlr3tuning.async_freeze_archive")
   )
   tuned$id <- "xgboost"
 
-  mirai::daemons(workers, .compute = "mlr3_parallelization", seed = 2026L)
-  on.exit(mirai::daemons(0, .compute = "mlr3_parallelization"))
+  # Requires a running Redis server (REDIS_URL or localhost default)
+  mirai::daemons(workers, seed = 2026L)
+  on.exit(mirai::daemons(0))
+  rush::rush_plan(n_workers = workers, worker_type = "mirai")
 
   # No $marshal() needed: xgboost v3 boosters serialize natively
   tuned$train(task)
