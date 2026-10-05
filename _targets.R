@@ -6,12 +6,25 @@ tar_option_set(
 
 tar_source()
 
+tuning_n_evals <- 1000
+tuning_workers <- floor(parallelly::availableCores(omit = 1, which = "max") / 2)
+
 list(
   tar_target(bike_raw, load_bikeshare()),
   tar_target(bike, preprocess_bike(bike_raw)),
-  tar_target(task_rpf, as_task_regr(bike, target = "bikers", id = "bikeshare")),
-  tar_target(task_xgb, make_task_xgb(bike)),
-  tar_target(tuned_xgb, tune_xgb(task_xgb, n_evals = 1000)),
-  tar_target(result_xgb, tuned_xgb$tuning_instance$result),
-  tar_target(archive_xgb, as.data.table(tuned_xgb$archive))
+  tar_target(bike_task, make_bike_task(bike)),
+  # xgboost ----
+  tar_target(
+    tuned_xgb,
+    tune_xgb(bike_task, n_evals = tuning_n_evals, workers = tuning_workers)
+  ),
+  tar_target(result_xgb, tuned_xgb$tuning_result),
+  tar_target(archive_xgb, as.data.table(tuned_xgb$archive)),
+  # rpf ----
+  tar_target(
+    tuned_rpf,
+    tune_rpf(bike_task, n_evals = tuning_n_evals, workers = tuning_workers)
+  ),
+  tar_target(result_rpf, tuned_rpf$unmarshal()$tuning_result),
+  tar_target(archive_rpf, as.data.table(tuned_rpf$unmarshal()$archive)),
 )

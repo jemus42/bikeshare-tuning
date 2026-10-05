@@ -1,6 +1,6 @@
-pak::pak(c("mlr3verse", "mlr-org/mlr3extralearners", "PlantedML/randomPlantedForest"))
+pak::pak(c("mlr3tuning", "mlr-org/mlr3extralearners", "PlantedML/randomPlantedForest"))
 
-library(mlr3verse)
+library(mlr3tuning)
 library(mlr3extralearners)
 
 bike <- readRDS("bike.rds")
@@ -8,7 +8,7 @@ bike <- readRDS("bike.rds")
 biketask <- as_task_regr(bike, target = "bikers")
 length(biketask$feature_names)
 
-terminator <- trm("evals", n_evals = 500, k = 0)
+terminator <- trm("evals", n_evals = 20, k = 0)
 inner_resampling <- rsmp("cv", folds = 3)
 #tuner <- tnr("mbo")
 tuner <- tnr("random_search", batch_size = 5)
@@ -33,4 +33,14 @@ future::plan("multisession", workers = 10)
 
 tuned_rpf$train(biketask)
 tuned_rpf$tuning_instance$result
+tuned_rpf$marshal()
 saveRDS(tuned_rpf, "tuned_rpf.rds")
+
+reloaded_rpf <- readRDS("tuned_rpf.rds")
+reloaded_rpf$unmarshal()
+reloaded_rpf$tuning_instance$result
+reloaded_rpf$predict(biketask, row_ids = 1:10)
+
+system.time({
+  reloaded_rpf$predict(biketask)
+})

@@ -520,6 +520,20 @@ dependencies = [
 ]
 
 [[packages]]
+name = "hardhat"
+version = "1.4.3"
+source = { repository = "https://p3m.dev/cran/latest" }
+force_source = false
+dependencies = [
+    { name = "cli", requirement = "(>= 3.6.0)" },
+    { name = "glue", requirement = "(>= 1.6.2)" },
+    { name = "rlang", requirement = "(>= 1.1.0)" },
+    { name = "sparsevctrs", requirement = "(>= 0.2.0)" },
+    { name = "tibble", requirement = "(>= 3.2.1)" },
+    { name = "vctrs", requirement = "(>= 0.6.0)" },
+]
+
+[[packages]]
 name = "highr"
 version = "0.12"
 source = { repository = "https://p3m.dev/cran/latest" }
@@ -802,7 +816,7 @@ dependencies = [
 [[packages]]
 name = "mlr3extralearners"
 version = "1.7.0.9000"
-source = { git = "https://github.com/mlr-org/mlr3extralearners", sha = "2ea0b33bd0ae4e2b1e8d79d16c81fd6d51eb3fb3", branch = "main" }
+source = { git = "https://github.com/mlr-org/mlr3extralearners", sha = "737eec150d0d9a9b71794824ba1ba299dfa948e6", branch = "rpf-redux" }
 force_source = true
 dependencies = [
     { name = "mlr3", requirement = "(>= 1.8.0)" },
@@ -1151,6 +1165,18 @@ dependencies = [
 ]
 
 [[packages]]
+name = "randomPlantedForest"
+version = "0.4.0"
+source = { git = "https://github.com/PlantedML/randomPlantedForest", sha = "2b821511282a23ca07ad0c595f8f84622ebba4a3", branch = "master" }
+force_source = true
+dependencies = [
+    "checkmate",
+    "data.table",
+    "hardhat",
+    "Rcpp",
+]
+
+[[packages]]
 name = "ranger"
 version = "0.18.0"
 source = { repository = "https://p3m.dev/cran/latest" }
@@ -1376,6 +1402,17 @@ source = { repository = "https://p3m.dev/cran/latest" }
 force_source = false
 dependencies = [
     { name = "Rcpp", requirement = "(>= 1.0.0)" },
+]
+
+[[packages]]
+name = "sparsevctrs"
+version = "0.3.6"
+source = { repository = "https://p3m.dev/cran/latest" }
+force_source = false
+dependencies = [
+    { name = "cli", requirement = "(>= 3.4.0)" },
+    { name = "rlang", requirement = "(>= 1.1.0)" },
+    "vctrs",
 ]
 
 [[packages]]
