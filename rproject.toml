@@ -29,5 +29,5 @@ dependencies = [
     "mlr3learners",
     "xgboost",
     "rush",
-    { name = "randomPlantedForest", git = "https://github.com/PlantedML/randomPlantedForest", branch = "master" },
+    { name = "randomPlantedForest", git = "https://github.com/PlantedML/randomPlantedForest", branch = "predict-speedup" },
 ]
