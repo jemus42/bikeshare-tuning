@@ -13,18 +13,20 @@ list(
   tar_target(bike_raw, load_bikeshare()),
   tar_target(bike, preprocess_bike(bike_raw)),
   tar_target(bike_task, make_bike_task(bike)),
+  tar_target(bike_task_encoded, make_bike_task(bike, encode = TRUE)),
   # xgboost ----
   tar_target(
     tuned_xgb,
-    tune_xgb(bike_task, n_evals = tuning_n_evals, workers = tuning_workers)
+    tune_xgb(bike_task_encoded, n_evals = tuning_n_evals, workers = tuning_workers)
   ),
   tar_target(result_xgb, tuned_xgb$tuning_result),
   tar_target(archive_xgb, as.data.table(tuned_xgb$archive)),
   # rpf ----
   tar_target(
     tuned_rpf,
-    tune_rpf(bike_task, n_evals = tuning_n_evals, workers = tuning_workers)
+    tune_rpf(bike_task, n_evals = tuning_n_evals, workers = tuning_workers),
+    packages = "mlr3extralearners"
   ),
   tar_target(result_rpf, tuned_rpf$unmarshal()$tuning_result),
-  tar_target(archive_rpf, as.data.table(tuned_rpf$unmarshal()$archive)),
+  tar_target(archive_rpf, as.data.table(tuned_rpf$unmarshal()$archive))
 )

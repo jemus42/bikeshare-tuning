@@ -22,13 +22,17 @@ preprocess_bike <- function(bike_raw) {
   bike[]
 }
 
-# xgboost handle sfactors since v3
-make_bike_task <- function(bike) {
+# rpf and xgboost (v3) both handle factors natively
+make_bike_task <- function(bike, encode = FALSE) {
   bike <- copy(bike)
   bike[, let(
     mnth = NULL,
-    workingday = as.integer(workingday == "Workingday"),
     weathersit = factor(gsub("[[:space:]/]", "_", weathersit))
   )]
-  as_task_regr(model.matrix(~ -1 + ., bike), target = "bikers", id = "bikeshare_xgb")
+  # ponytail: mlr3learners' regr.xgboost rejects factor features, drop once it accepts them
+  if (encode) {
+    bike[, workingday := as.integer(workingday == "Workingday")]
+    return(as_task_regr(model.matrix(~ -1 + ., bike), target = "bikers", id = "bikeshare_encoded"))
+  }
+  as_task_regr(bike, target = "bikers", id = "bikeshare")
 }

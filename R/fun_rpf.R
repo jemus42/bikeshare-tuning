@@ -1,13 +1,19 @@
 tune_rpf <- function(task, n_evals = 500, workers = parallelly::availableCores(omit = 1)) {
   learner <- lrn(
     "regr.rpf",
-    ntrees = 200
-    max_interaction = to_tune(2, length(biketask$feature_names)),
-    splits = to_tune(10, 500),
-    split_try = to_tune(1, 50),
-    t_try = p_dbl(0.01, 1)
+    ntrees = 200,
+    # 1 = additive model; upper end lets trees use every feature
+    max_interaction = to_tune(1, length(task$feature_names)),
+    splits = to_tune(p_int(10, 1000, logscale = TRUE)),
+    split_structure = to_tune(),
+    split_try = to_tune(p_int(1, 50, logscale = TRUE)),
+    t_try = to_tune(0.01, 1),
+    # caps t_try: candidates per round = min(t_try * possible splits, max_candidates)
+    max_candidates = to_tune(p_int(10, 500, logscale = TRUE)),
+    # 0 = uniform candidate sampling
+    split_decay_rate = to_tune(0, 1),
+    delete_leaves = to_tune()
   )
-  set_validate(learner, "test")
 
   tuned <- auto_tuner(
     # Batch MBO proposes one point at a time; async keeps all workers busy

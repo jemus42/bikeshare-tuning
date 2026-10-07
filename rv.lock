@@ -816,7 +816,7 @@ dependencies = [
 [[packages]]
 name = "mlr3extralearners"
 version = "1.7.0.9000"
-source = { git = "https://github.com/mlr-org/mlr3extralearners", sha = "737eec150d0d9a9b71794824ba1ba299dfa948e6", branch = "rpf-redux" }
+source = { git = "https://github.com/mlr-org/mlr3extralearners", sha = "efab9647e67ad12ae03ec790c8fb5484836a466a", branch = "rpf-redux" }
 force_source = true
 dependencies = [
     { name = "mlr3", requirement = "(>= 1.8.0)" },
@@ -1166,8 +1166,8 @@ dependencies = [
 
 [[packages]]
 name = "randomPlantedForest"
-version = "0.4.0"
-source = { git = "https://github.com/PlantedML/randomPlantedForest", sha = "2b821511282a23ca07ad0c595f8f84622ebba4a3", branch = "master" }
+version = "0.4.0.9000"
+source = { git = "https://github.com/PlantedML/randomPlantedForest", sha = "f635a3cef9fc812c6c1b4de3f335e9821489f1c5", branch = "predict-speedup" }
 force_source = true
 dependencies = [
     "checkmate",
