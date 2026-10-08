@@ -25,7 +25,7 @@ dependencies = [
     "rgenoud",
     "DiceKriging",
     { name = "mlr3cmprsk", git = "https://github.com/mlr-org/mlr3cmprsk", branch = "main" },
-    { name = "mlr3extralearners", git = "https://github.com/mlr-org/mlr3extralearners", commit = "efab9647e67ad12ae03ec790c8fb5484836a466a" },
+    { name = "mlr3extralearners", git = "https://github.com/mlr-org/mlr3extralearners", branch = "rpf-redux" },
     "mlr3learners",
     "xgboost",
     "rush",

@@ -823,7 +823,7 @@ dependencies = [
 [[packages]]
 name = "mlr3extralearners"
 version = "1.7.0.9000"
-source = { git = "https://github.com/mlr-org/mlr3extralearners", sha = "efab9647e67ad12ae03ec790c8fb5484836a466a" }
+source = { git = "https://github.com/mlr-org/mlr3extralearners", sha = "aca3c01cc800c06109a9eb6976af761e79a6ba68", branch = "rpf-redux" }
 force_source = true
 dependencies = [
     { name = "mlr3", requirement = "(>= 1.8.0)" },
