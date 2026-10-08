@@ -31,3 +31,20 @@ export_params <- function(path, ...) {
   jsonlite::write_json(out, path, auto_unbox = TRUE, pretty = TRUE, digits = NA)
   path
 }
+
+# Bounds on the tuning scale (log for logscale params), so the report matches whichever run produced the archives
+export_search_space <- function(path, ...) {
+  tuned <- list(...)
+  out <- rbindlist(lapply(names(tuned), function(model) {
+    search_space <- tuned[[model]]$unmarshal()$tuning_instance$search_space
+    data.table(
+      model = model,
+      param = search_space$ids(),
+      lower = search_space$lower,
+      upper = search_space$upper,
+      logscale = search_space$is_logscale
+    )
+  }))
+  fwrite(out[!is.na(lower)], path)
+  path
+}

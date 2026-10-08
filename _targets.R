@@ -36,5 +36,11 @@ list(
     params_file,
     export_params("results/best_params.json", xgboost = result_xgb, rpf = result_rpf),
     format = "file"
+  ),
+  tar_target(
+    search_space_file,
+    export_search_space("results/search_space.csv", xgb = tuned_xgb, rpf = tuned_rpf),
+    format = "file",
+    packages = "mlr3extralearners"
   )
 )

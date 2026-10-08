@@ -29,25 +29,8 @@ archives <- list(xgb = read_archive("xgb"), rpf = read_archive("rpf"))
 both <- rbindlist(lapply(archives, \(a) a[, .(model, eval, init_design, regr.mse, incumbent, runtime_learners)]))
 fold_cols <- c("mse_fold1", "mse_fold2", "mse_fold3")
 
-# Mirrors the search spaces in R/fun_xgboost.R and R/fun_rpf.R; rpf task has 9 features
-search_space <- rbindlist(list(
-  list("xgb", "max_depth", 2, 12, FALSE),
-  list("xgb", "subsample", 0.1, 1, FALSE),
-  list("xgb", "colsample_bytree", 0.5, 1, FALSE),
-  list("xgb", "eta", 1e-3, 0.3, TRUE),
-  list("xgb", "lambda", 1e-3, 1e3, TRUE),
-  list("xgb", "alpha", 1e-3, 1e2, TRUE),
-  list("xgb", "min_child_weight", 1, 100, TRUE),
-  list("xgb", "gamma", 1e-3, 1e3, TRUE),
-  list("xgb", "internal_tuned_values_nrounds", 1, 5000, FALSE),
-  list("rpf", "max_interaction", 1, 9, FALSE),
-  list("rpf", "splits", 10, 1000, TRUE),
-  list("rpf", "split_try", 1, 50, TRUE),
-  list("rpf", "t_try", 0.01, 1, FALSE),
-  list("rpf", "max_candidates", 10, 500, TRUE),
-  list("rpf", "split_decay_rate", 0, 1, FALSE)
-))
-setnames(search_space, c("model", "param", "lower", "upper", "logscale"))
+# Bounds on the tuning scale: log(value) for logscale params
+search_space <- fread("results/search_space.csv")
 ```
 
 Both learners were tuned with asynchronous MBO, 1000 evaluations each, using
@@ -181,11 +164,7 @@ positions <- rbindlist(lapply(archives, \(a) {
   long <- melt(top, id.vars = c("model", "rank"), measure.vars = space$param, variable.name = "param")
   long[, param := as.character(param)]
   long <- long[space, on = c("model", "param")]
-  long[, position := fifelse(
-    logscale,
-    (log(value) - log(lower)) / (log(upper) - log(lower)),
-    (value - lower) / (upper - lower)
-  )]
+  long[, position := (fifelse(logscale, log(value), value) - lower) / (upper - lower)]
 }))
 
 ggplot(positions, aes(x = position, y = param)) +

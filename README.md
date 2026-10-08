@@ -9,6 +9,7 @@ Tuned hyperparameters (3-fold CV MSE, 1000 async MBO evals each) are committed i
 
 - `best_params.json`: full `param_vals` for the best xgboost and rpf configs
 - `xgb_archive.csv`, `rpf_archive.csv`: all evaluated configs on the learner scale in evaluation order, with per-fold MSE
+- `search_space.csv`: tuning bounds of the run that produced the archives (log scale where `logscale` is TRUE)
 
 `tuning-report.qmd` analyzes the archives (convergence, CV noise, search space bounds); render with `make report`.
 

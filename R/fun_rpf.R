@@ -7,7 +7,8 @@ tune_rpf <- function(task, n_evals = 500, workers = parallelly::availableCores(o
     splits = to_tune(p_int(10, 1000, logscale = TRUE)),
     split_structure = to_tune(),
     split_try = to_tune(p_int(1, 50, logscale = TRUE)),
-    t_try = to_tune(0.01, 1),
+    # Below 1 / possible splits, ceil() leaves a single candidate, so tiny values are harmless
+    t_try = to_tune(p_dbl(1e-4, 1, logscale = TRUE)),
     # caps t_try: candidates per round = min(t_try * possible splits, max_candidates)
     max_candidates = to_tune(p_int(10, 500, logscale = TRUE)),
     # 0 = uniform candidate sampling
@@ -21,7 +22,7 @@ tune_rpf <- function(task, n_evals = 500, workers = parallelly::availableCores(o
     learner = learner,
     resampling = rsmp("cv", folds = 3),
     measure = msr("regr.mse"),
-    terminator = trm("evals", n_evals = n_evals, k = 0),
+    terminator = trm_evals_or_stagnation(n_evals),
     store_tuning_instance = TRUE,
     store_benchmark_result = TRUE,
     # Async archive lives in Redis; freeze it so the stored target is self-contained

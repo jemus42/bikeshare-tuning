@@ -1,0 +1,15 @@
+model,param,lower,upper,logscale
+xgb,alpha,-6.90775527898214,4.60517018598809,TRUE
+xgb,colsample_bytree,0.5,1,FALSE
+xgb,eta,-6.90775527898214,-1.20397280432594,TRUE
+xgb,gamma,-6.90775527898214,6.90775527898214,TRUE
+xgb,lambda,-6.90775527898214,6.90775527898214,TRUE
+xgb,max_depth,2,12,FALSE
+xgb,min_child_weight,0,4.60517018598809,TRUE
+xgb,subsample,0.1,1,FALSE
+rpf,max_interaction,1,9,FALSE
+rpf,splits,2.30258509299405,6.90875477931522,TRUE
+rpf,split_try,0,3.93182563272433,TRUE
+rpf,t_try,0.01,1,FALSE
+rpf,split_decay_rate,0,1,FALSE
+rpf,max_candidates,2.30258509299405,6.21660610108487,TRUE
