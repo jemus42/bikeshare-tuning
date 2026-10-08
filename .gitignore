@@ -6,3 +6,5 @@
 *.rds
 _targets/
 dump.rdb
+
+tuning-report.html

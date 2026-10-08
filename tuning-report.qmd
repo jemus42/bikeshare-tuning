@@ -1,0 +1,284 @@
+---
+title: "Would more tuning budget help?"
+subtitle: "Analysis of the xgboost and rpf tuning archives on Bikeshare"
+date: today
+format:
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(data.table)
+library(ggplot2)
+
+theme_set(theme_minimal(base_size = 12) + theme(legend.position = "bottom"))
+
+read_archive <- function(model) {
+  archive <- fread(file.path("results", sprintf("%s_archive.csv", model)))
+  archive[, model := model]
+  archive[, incumbent := cummin(regr.mse)]
+  archive[]
+}
+
+archives <- list(xgb = read_archive("xgb"), rpf = read_archive("rpf"))
+both <- rbindlist(lapply(archives, \(a) a[, .(model, eval, init_design, regr.mse, incumbent, runtime_learners)]))
+fold_cols <- c("mse_fold1", "mse_fold2", "mse_fold3")
+
+# Mirrors the search spaces in R/fun_xgboost.R and R/fun_rpf.R; rpf task has 9 features
+search_space <- rbindlist(list(
+  list("xgb", "max_depth", 2, 12, FALSE),
+  list("xgb", "subsample", 0.1, 1, FALSE),
+  list("xgb", "colsample_bytree", 0.5, 1, FALSE),
+  list("xgb", "eta", 1e-3, 0.3, TRUE),
+  list("xgb", "lambda", 1e-3, 1e3, TRUE),
+  list("xgb", "alpha", 1e-3, 1e2, TRUE),
+  list("xgb", "min_child_weight", 1, 100, TRUE),
+  list("xgb", "gamma", 1e-3, 1e3, TRUE),
+  list("xgb", "internal_tuned_values_nrounds", 1, 5000, FALSE),
+  list("rpf", "max_interaction", 1, 9, FALSE),
+  list("rpf", "splits", 10, 1000, TRUE),
+  list("rpf", "split_try", 1, 50, TRUE),
+  list("rpf", "t_try", 0.01, 1, FALSE),
+  list("rpf", "max_candidates", 10, 500, TRUE),
+  list("rpf", "split_decay_rate", 0, 1, FALSE)
+))
+setnames(search_space, c("model", "param", "lower", "upper", "logscale"))
+```
+
+Both learners were tuned with asynchronous MBO, 1000 evaluations each, using
+3-fold CV MSE.
+The first ~100 evaluations are the random initial design; after that the
+surrogate model proposes configurations.
+All numbers here come from `results/*_archive.csv`, so this report renders
+without the `_targets/` store.
+
+## Incumbent trajectory
+
+```{r fig-incumbent}
+#| fig-cap: "MSE of evaluated configurations (points) and best-so-far MSE (line), zoomed to the range below the incumbent after the initial design. Dashed line: size of the initial design."
+# Async evaluation interleaves late initial-design results with MBO proposals, so mark its size, not its last eval
+n_init <- both[, .(n_init = sum(init_design)), by = model]
+zoom <- both[n_init, on = "model"][, .(upper = incumbent[n_init[1]]), by = model]
+zoomed <- both[zoom, on = "model"][, incumbent := pmin(incumbent, upper)]
+
+ggplot(zoomed, aes(x = eval)) +
+  geom_point(data = zoomed[regr.mse <= upper], aes(y = regr.mse), alpha = 0.3, size = 0.8) +
+  geom_step(aes(y = incumbent), linewidth = 0.8, color = "#b2182b") +
+  geom_vline(data = n_init, aes(xintercept = n_init), linetype = "dashed") +
+  facet_wrap(vars(model), scales = "free_y") +
+  labs(x = "Evaluation", y = "3-fold CV MSE")
+```
+
+```{r tab-budget}
+budget_fractions <- c(0.1, 0.25, 0.5, 0.75, 1)
+budget <- both[,
+  .(
+    fraction = budget_fractions,
+    eval = ceiling(budget_fractions * .N),
+    incumbent = incumbent[ceiling(budget_fractions * .N)]
+  ),
+  by = model
+]
+budget[, `:=`(
+  rmse = sqrt(incumbent),
+  gain_vs_final_pct = 100 * (incumbent / min(incumbent) - 1)
+), by = model]
+
+knitr::kable(
+  budget,
+  digits = c(0, 2, 0, 1, 2, 2),
+  col.names = c("Model", "Budget fraction", "Evaluation", "Best MSE", "Best RMSE", "MSE above final best (%)")
+)
+
+second_half <- budget[fraction %in% c(0.5, 1), .(gain = 100 * (1 - min(incumbent) / max(incumbent))), by = model]
+gain <- setNames(second_half$gain, second_half$model)
+```
+
+The second half of the budget lowered the best MSE by
+`r sprintf("%.1f%%", gain[["xgb"]])` for xgboost and
+`r sprintf("%.1f%%", gain[["rpf"]])` for rpf.
+In RMSE (the unit of the target, bikers per hour) that is well below one
+biker.
+
+## Are the remaining gains distinguishable from CV noise?
+
+The best configuration is the minimum of 1000 noisy CV estimates, so it is
+optimistically biased: part of its lead over the runner-up is luck.
+Two noise scales to compare against:
+
+- **Standard error of the CV mean** of the best configuration (fold SD / √3).
+  This is roughly how much its estimate would move under a fresh resampling,
+  and it dwarfs the differences between top configurations.
+- **Paired differences** to the best configuration.
+  All configurations share the same CV folds (instantiated once per tuning
+  run), so per-fold differences cancel the fold effect.
+  With only 3 folds, the standard error of that difference rests on 2 degrees
+  of freedom and is itself very noisy.
+
+```{r tab-noise}
+noise <- rbindlist(lapply(archives, \(a) {
+  best <- a[which.min(regr.mse)]
+  best_folds <- unlist(best[, ..fold_cols])
+  top <- a[order(regr.mse)][2:21]
+  paired_diff <- as.matrix(top[, ..fold_cols]) - matrix(best_folds, nrow(top), 3, byrow = TRUE)
+  data.table(
+    model = best$model,
+    best_mse = best$regr.mse,
+    fold_sd = sd(best_folds),
+    cv_se = sd(best_folds) / sqrt(3),
+    gap_to_20th = top[.N, regr.mse] - best$regr.mse,
+    median_paired_se = median(apply(paired_diff, 1, sd) / sqrt(3)),
+    n_within_1pct = a[regr.mse <= 1.01 * best$regr.mse, .N]
+  )
+}))
+
+knitr::kable(
+  noise,
+  digits = c(0, 1, 1, 1, 1, 1, 0),
+  col.names = c(
+    "Model", "Best MSE", "Fold SD of best", "SE of best's CV mean", "Gap best to 20th best",
+    "Median paired SE (top 20)", "Configs within 1% of best"
+  )
+)
+```
+
+```{r fig-folds}
+#| fig-cap: "Per-fold MSE of the 10 best configurations. Lines connect the folds of one configuration; parallel lines mean the fold effect dominates the configuration effect."
+top_folds <- rbindlist(lapply(archives, \(a) {
+  top <- a[order(regr.mse)][1:10, c("model", "eval", "regr.mse", fold_cols), with = FALSE]
+  top[, rank := seq_len(.N)]
+  melt(top, measure.vars = fold_cols, variable.name = "fold", value.name = "mse")
+}))
+top_folds[, fold := sub("mse_", "", fold)]
+
+ggplot(top_folds, aes(x = fold, y = mse, group = eval, color = rank)) +
+  geom_line(alpha = 0.7) +
+  geom_point() +
+  facet_wrap(vars(model), scales = "free_y") +
+  scale_color_viridis_c(direction = -1) +
+  labs(x = NULL, y = "MSE", color = "Rank")
+```
+
+## Search space boundaries
+
+If good configurations crowd against a bound, the optimum may lie outside the
+search space, and more budget inside it will not find it.
+Positions are normalized to [0, 1] within the bounds, on log scale where the
+parameter was tuned on log scale.
+
+```{r fig-bounds}
+#| fig-cap: "Position of the 50 best configurations within each parameter's search range. 0 = lower bound, 1 = upper bound. Red: best configuration."
+top_n <- 50
+positions <- rbindlist(lapply(archives, \(a) {
+  top <- a[order(regr.mse)][seq_len(top_n)]
+  top[, rank := seq_len(.N)]
+  space <- search_space[model == a$model[1]]
+  long <- melt(top, id.vars = c("model", "rank"), measure.vars = space$param, variable.name = "param")
+  long[, param := as.character(param)]
+  long <- long[space, on = c("model", "param")]
+  long[, position := fifelse(
+    logscale,
+    (log(value) - log(lower)) / (log(upper) - log(lower)),
+    (value - lower) / (upper - lower)
+  )]
+}))
+
+ggplot(positions, aes(x = position, y = param)) +
+  geom_jitter(data = positions[rank > 1], height = 0.15, width = 0, alpha = 0.4) +
+  geom_point(data = positions[rank == 1], color = "#b2182b", size = 3) +
+  facet_wrap(vars(model), scales = "free_y", ncol = 1) +
+  scale_x_continuous(limits = c(0, 1)) +
+  labs(x = "Position in search range", y = NULL)
+```
+
+```{r tab-bounds}
+near_bound_threshold <- 0.05
+near_bound <- positions[,
+  .(
+    best_value = format(signif(value[rank == 1], 3)),
+    share_near_lower = mean(position <= near_bound_threshold),
+    share_near_upper = mean(position >= 1 - near_bound_threshold)
+  ),
+  by = .(model, param)
+][share_near_lower >= 0.25 | share_near_upper >= 0.25]
+
+knitr::kable(
+  near_bound,
+  digits = 2,
+  col.names = c("Model", "Parameter", "Best value", "Share near lower", "Share near upper"),
+  caption = sprintf(
+    "Parameters where at least 25%% of the top %d configurations lie within %d%% of a bound.",
+    top_n, 100 * near_bound_threshold
+  )
+)
+```
+
+Categorical parameters of rpf among the top configurations:
+
+```{r tab-categorical}
+top_rpf <- archives$rpf[order(regr.mse)][seq_len(top_n)]
+knitr::kable(
+  top_rpf[, .N, by = .(split_structure, delete_leaves)][order(-N)],
+  caption = sprintf("Top %d rpf configurations", top_n)
+)
+```
+
+## Cost
+
+```{r tab-cost}
+cost <- both[, .(
+  total_cpu_hours = sum(runtime_learners) / 3600,
+  median_eval_minutes = median(runtime_learners) / 60,
+  best_eval_minutes = runtime_learners[which.min(regr.mse)] / 60
+), by = model]
+
+knitr::kable(
+  cost,
+  digits = 1,
+  col.names = c("Model", "Total learner CPU hours", "Median minutes per eval", "Minutes for best config")
+)
+```
+
+`runtime_learners` is the summed train and predict time over the 3 folds of one
+evaluation.
+
+## Conclusion
+
+```{r conclusion-numbers}
+second_half_mse <- both[, .(gain = incumbent[floor(.N / 2)] - min(incumbent)), by = model]
+ratio <- setNames(noise$cv_se / second_half_mse$gain[match(noise$model, second_half_mse$model)], noise$model)
+```
+
+- **xgboost: converged.**
+  The second half of the budget lowered the best MSE by
+  `r sprintf("%.1f%%", gain[["xgb"]])`, about
+  `r sprintf("%.0f", ratio[["xgb"]])`× smaller than the standard error of the
+  best configuration's CV estimate.
+  Hundreds of configurations are within 1% of the best.
+  The parameters near a bound (`alpha`, `gamma`) sit at the lower end of
+  log-scaled regularization ranges starting at 1e-3, which already means
+  "practically no regularization"; widening those ranges would not change the
+  model.
+- **rpf: the search space, not the budget, is the limit.**
+  Its second-half gain (`r sprintf("%.1f%%", gain[["rpf"]])`) is also about
+  `r sprintf("%.0f", ratio[["rpf"]])`× below the CV standard error, but nearly
+  all top configurations sit at the upper bound of `splits` and the lower bound
+  of `t_try`.
+  The optimum likely lies outside the current box.
+  Figure 1 agrees: unlike xgboost, rpf's MBO proposals are still drifting
+  downward at the end of the run, as the surrogate keeps pushing toward those
+  bounds.
+  A short follow-up tuning with a wider range for those two parameters (and
+  `split_structure = "leaves"`, `delete_leaves = FALSE` fixed) is worth more
+  than extending this run.
+  Larger `splits` makes each evaluation slower, so expect higher cost per
+  evaluation than the median above.
+- **Either way:** the ranking among top configurations is mostly CV noise and
+  selection bias.
+  Re-evaluating the top 10–20 with repeated CV is a cheaper way to a more
+  reliable pick than more search.
