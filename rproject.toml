@@ -29,6 +29,6 @@ dependencies = [
     "mlr3learners",
     "xgboost",
     "rush",
-    { name = "randomPlantedForest", git = "https://github.com/PlantedML/randomPlantedForest", commit = "f635a3cef9fc812c6c1b4de3f335e9821489f1c5" },
+    { name = "randomPlantedForest", git = "https://github.com/PlantedML/randomPlantedForest", branch = "master" },
     "ISLR2",
 ]
