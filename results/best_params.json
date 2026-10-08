@@ -1,0 +1,35 @@
+{
+  "xgboost": {
+    "param_vals": {
+      "alpha": 0.00986764703270351,
+      "colsample_bytree": 0.875293897726671,
+      "eta": 0.0142215119379584,
+      "eval_metric": "rmse",
+      "gamma": 0.00632210320307227,
+      "lambda": 36.5747750427504,
+      "max_depth": 8,
+      "min_child_weight": 2.05492333555331,
+      "nrounds": 2149,
+      "nthread": 1,
+      "subsample": 0.588091761556807,
+      "verbose": 0,
+      "verbosity": 0,
+      "use_pred_offset": true
+    },
+    "regr.mse": 1051.51700320984
+  },
+  "rpf": {
+    "param_vals": {
+      "ntrees": 200,
+      "max_interaction": 7,
+      "splits": 1000,
+      "split_try": 3,
+      "t_try": 0.0116076519179535,
+      "split_decay_rate": 0.356720741236264,
+      "max_candidates": 73,
+      "delete_leaves": false,
+      "split_structure": "leaves"
+    },
+    "regr.mse": 1038.24203736709
+  }
+}

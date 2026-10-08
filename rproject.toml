@@ -25,9 +25,10 @@ dependencies = [
     "rgenoud",
     "DiceKriging",
     { name = "mlr3cmprsk", git = "https://github.com/mlr-org/mlr3cmprsk", branch = "main" },
-    { name = "mlr3extralearners", git = "https://github.com/mlr-org/mlr3extralearners", branch = "rpf-redux" },
+    { name = "mlr3extralearners", git = "https://github.com/mlr-org/mlr3extralearners", commit = "efab9647e67ad12ae03ec790c8fb5484836a466a" },
     "mlr3learners",
     "xgboost",
     "rush",
-    { name = "randomPlantedForest", git = "https://github.com/PlantedML/randomPlantedForest", branch = "predict-speedup" },
+    { name = "randomPlantedForest", git = "https://github.com/PlantedML/randomPlantedForest", commit = "f635a3cef9fc812c6c1b4de3f335e9821489f1c5" },
+    "ISLR2",
 ]

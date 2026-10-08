@@ -28,5 +28,13 @@ list(
     packages = "mlr3extralearners"
   ),
   tar_target(result_rpf, tuned_rpf$unmarshal()$tuning_result),
-  tar_target(archive_rpf, as.data.table(tuned_rpf$unmarshal()$archive))
+  tar_target(archive_rpf, as.data.table(tuned_rpf$unmarshal()$archive)),
+  # exports (committed) ----
+  tar_target(xgb_archive_file, export_archive(archive_xgb, "results/xgb_archive.csv"), format = "file"),
+  tar_target(rpf_archive_file, export_archive(archive_rpf, "results/rpf_archive.csv"), format = "file"),
+  tar_target(
+    params_file,
+    export_params("results/best_params.json", xgboost = result_xgb, rpf = result_rpf),
+    format = "file"
+  )
 )
