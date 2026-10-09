@@ -21,14 +21,18 @@ export_archive <- function(archive, path) {
 }
 
 export_params <- function(path, ...) {
-  results <- list(...)
-  out <- lapply(results, function(r) {
-    vals <- r$learner_param_vals[[1]]
+  out <- lapply(list(...), function(reeval) {
+    best <- pick_best(reeval)
     # JSON has no Inf; the only one is rpf's max_interaction_limit init value
-    vals <- Filter(function(v) !(is.numeric(v) && !is.finite(v)), vals)
-    list(param_vals = vals, regr.mse = r$regr.mse)
+    best$param_vals <- Filter(function(v) !(is.numeric(v) && !is.finite(v)), best$param_vals)
+    best
   })
   jsonlite::write_json(out, path, auto_unbox = TRUE, pretty = TRUE, digits = NA)
+  path
+}
+
+export_reeval <- function(path, ...) {
+  fwrite(rbindlist(lapply(list(...), \(reeval) reeval$scores)), path)
   path
 }
 

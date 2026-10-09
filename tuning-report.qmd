@@ -208,6 +208,70 @@ knitr::kable(
 )
 ```
 
+## Re-evaluation of the top configurations
+
+The 20 best configurations of each tuning run were re-scored with 10 × 5-fold
+repeated CV on fresh splits, identical for all configurations and both models.
+`best_params.json` holds the configuration with the lowest mean re-evaluation
+MSE, not the tuning winner.
+
+Re-evaluation MSE levels are not directly comparable to tuning MSE: 5-fold CV
+trains on 80% of the data instead of 67%, which lowers MSE on its own, on top
+of removing the selection bias.
+Ranks are comparable.
+
+```{r reeval}
+reeval <- fread("results/reeval.csv")
+reeval_summary <- reeval[,
+  .(tuning_mse = tuning_mse[1], reeval_mse = mean(regr.mse), reeval_se = sd(regr.mse) / sqrt(.N)),
+  by = .(model, rank_tuning)
+]
+reeval_summary[, rank_reeval := frank(reeval_mse, ties.method = "min"), by = model]
+
+# Paired over the shared splits, against each model's re-evaluation winner
+reeval[, best_rank := reeval_summary[model == .BY$model][which.min(reeval_mse), rank_tuning], by = model]
+paired <- reeval[,
+  .(diff = regr.mse - regr.mse[rank_tuning == best_rank[1]], rank_tuning),
+  by = .(model, iteration)
+][, .(paired_diff = mean(diff), paired_se = sd(diff) / sqrt(.N)), by = .(model, rank_tuning)]
+reeval_summary <- reeval_summary[paired, on = c("model", "rank_tuning")]
+
+rank_cor <- reeval_summary[, .(spearman = cor(rank_tuning, rank_reeval, method = "spearman")), by = model]
+winner_rank <- reeval_summary[rank_reeval == 1, setNames(rank_tuning, model)]
+```
+
+```{r fig-reeval}
+#| fig-cap: "Tuning MSE (3-fold CV) against re-evaluation MSE (10 × 5-fold CV) of the top 20 configurations. Error bars: ±2 naive SE of the re-evaluation mean. Red: re-evaluation winner."
+ggplot(reeval_summary, aes(x = tuning_mse, y = reeval_mse)) +
+  geom_errorbar(aes(ymin = reeval_mse - 2 * reeval_se, ymax = reeval_mse + 2 * reeval_se), width = 0, alpha = 0.4) +
+  geom_point() +
+  geom_point(data = reeval_summary[rank_reeval == 1], color = "#b2182b", size = 3) +
+  facet_wrap(vars(model), scales = "free") +
+  labs(x = "Tuning MSE (3-fold CV)", y = "Re-evaluation MSE (10 × 5-fold CV)")
+```
+
+```{r tab-reeval}
+knitr::kable(
+  reeval_summary[order(model, rank_reeval)][rank_reeval <= 5, .(
+    model, rank_reeval, rank_tuning, tuning_mse, reeval_mse, paired_diff, paired_se
+  )],
+  digits = c(0, 0, 0, 1, 1, 2, 2),
+  col.names = c(
+    "Model", "Rank (re-eval)", "Rank (tuning)", "Tuning MSE", "Re-eval MSE",
+    "Paired diff to winner", "Paired SE"
+  ),
+  caption = "Five best configurations per model after re-evaluation"
+)
+```
+
+Spearman correlation between tuning and re-evaluation ranks:
+`r sprintf("%.2f", rank_cor[model == "xgb", spearman])` (xgboost),
+`r sprintf("%.2f", rank_cor[model == "rpf", spearman])` (rpf).
+The re-evaluation winners were tuning ranks
+`r winner_rank[["xgb"]]` (xgboost) and `r winner_rank[["rpf"]]` (rpf).
+Repeated CV iterations share training data, so the naive SEs understate the
+true uncertainty.
+
 ## Cost
 
 ```{r tab-cost}
