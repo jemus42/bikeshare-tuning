@@ -10,6 +10,6 @@ xgb,subsample,0.1,1,FALSE
 rpf,max_interaction,1,9,FALSE
 rpf,splits,2.30258509299405,6.90875477931522,TRUE
 rpf,split_try,0,3.93182563272433,TRUE
-rpf,t_try,0.01,1,FALSE
-rpf,split_decay_rate,0,1,FALSE
+rpf,t_try,-9.21034037197618,0,TRUE
 rpf,max_candidates,2.30258509299405,6.21660610108487,TRUE
+rpf,split_decay_rate,0,1,FALSE

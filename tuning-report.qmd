@@ -34,7 +34,8 @@ search_space <- fread("results/search_space.csv")
 ```
 
 Both learners were tuned with asynchronous MBO, 1000 evaluations each, using
-3-fold CV MSE.
+3-fold CV MSE; rpf would also have stopped after 200 evaluations without
+improvement.
 The first ~100 evaluations are the random initial design; after that the
 surrogate model proposes configurations.
 All numbers here come from `results/*_archive.csv`, so this report renders
@@ -243,20 +244,29 @@ ratio <- setNames(noise$cv_se / second_half_mse$gain[match(noise$model, second_h
   log-scaled regularization ranges starting at 1e-3, which already means
   "practically no regularization"; widening those ranges would not change the
   model.
-- **rpf: the search space, not the budget, is the limit.**
-  Its second-half gain (`r sprintf("%.1f%%", gain[["rpf"]])`) is also about
-  `r sprintf("%.0f", ratio[["rpf"]])`× below the CV standard error, but nearly
-  all top configurations sit at the upper bound of `splits` and the lower bound
-  of `t_try`.
-  The optimum likely lies outside the current box.
-  Figure 1 agrees: unlike xgboost, rpf's MBO proposals are still drifting
-  downward at the end of the run, as the surrogate keeps pushing toward those
-  bounds.
-  A short follow-up tuning with a wider range for those two parameters (and
-  `split_structure = "leaves"`, `delete_leaves = FALSE` fixed) is worth more
-  than extending this run.
-  Larger `splits` makes each evaluation slower, so expect higher cost per
-  evaluation than the median above.
+- **rpf: converged too.**
+  Its second-half gain (`r sprintf("%.1f%%", gain[["rpf"]])`) is about
+  `r sprintf("%.0f", ratio[["rpf"]])`× below the CV standard error.
+  With `t_try` tuned on log scale down to 1e-4, its top configurations sit well
+  inside the range (around 0.02).
+  An earlier run with `t_try` on a linear [0.01, 1] scale piled up at 0.01 but
+  reached a best MSE of 1038.2, the same as this run within noise, so that
+  bound was not costing accuracy.
+  - `splits` stays at its 1000 cap: more splits never hurt rpf, so only runtime
+    limits it, not tuning.
+  - `max_candidates` falls into two equally good clusters (around 30 and near
+    500).
+    Consistent with it and `t_try` capping the same candidate count: when the
+    cap is high, `t_try` sets the count instead.
+    Which one binds depends on the number of possible splits, which the archive
+    does not record.
+  - `split_decay_rate` leans toward its upper bound of 1; widening that range
+    is the one remaining search-space change worth trying.
+    `max_interaction` near 9 is the natural ceiling (all features), not a
+    constraint.
+  - The stagnation terminator (200 evaluations without improvement) did not
+    fire: the incumbent kept improving in small, noise-sized steps until the
+    end.
 - **Either way:** the ranking among top configurations is mostly CV noise and
   selection bias.
   Re-evaluating the top 10–20 with repeated CV is a cheaper way to a more

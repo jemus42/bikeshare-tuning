@@ -21,15 +21,15 @@
   "rpf": {
     "param_vals": {
       "ntrees": 200,
-      "max_interaction": 7,
-      "splits": 1000,
-      "split_try": 3,
-      "t_try": 0.0116076519179535,
-      "split_decay_rate": 0.356720741236264,
-      "max_candidates": 73,
-      "delete_leaves": false,
-      "split_structure": "leaves"
+      "max_interaction": 8,
+      "splits": 978,
+      "split_structure": "leaves",
+      "split_try": 4,
+      "t_try": 0.0209436678994484,
+      "max_candidates": 168,
+      "split_decay_rate": 0.997405688990129,
+      "delete_leaves": false
     },
-    "regr.mse": 1038.24203736709
+    "regr.mse": 1039.75561406574
   }
 }
