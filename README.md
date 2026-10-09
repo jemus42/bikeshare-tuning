@@ -21,3 +21,9 @@ learner <- lrn("regr.rpf")
 learner$param_set$set_values(.values = params$rpf$param_vals)
 learner$train(make_bike_task(preprocess_bike(load_bikeshare())))
 ```
+
+Or, if you just want the parameters without cloning this repo first:
+
+```r
+params <- jsonlite::read_json("https://raw.githubusercontent.com/jemus42/bikeshare-tuning/refs/heads/main/results/best_params.json")
+```
