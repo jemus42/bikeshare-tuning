@@ -22,8 +22,9 @@ reevaluate_top <- function(tuned, archive, task, model, n_top = 20, folds = 5, r
   set.seed(2026L)
   resampling$instantiate(task)
 
-  mirai::daemons(workers, seed = 2026L)
-  on.exit(mirai::daemons(0))
+  # mlr3 only parallelizes via this compute profile, not the default one
+  mirai::daemons(workers, seed = 2026L, .compute = "mlr3_parallelization")
+  on.exit(mirai::daemons(0, .compute = "mlr3_parallelization"))
   bmr <- benchmark(benchmark_grid(task, learners, resampling), store_models = FALSE)
 
   scores <- bmr$score(msr("regr.mse"))[, .(learner_id, iteration, regr.mse)]
