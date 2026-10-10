@@ -1,27 +1,30 @@
 {
   "xgboost": {
     "param_vals": {
-      "alpha": 0.00986764703270351,
-      "colsample_bytree": 0.875293897726671,
-      "eta": 0.0142215119379584,
+      "alpha": 0.00798389105101393,
+      "colsample_bytree": 0.891142531847033,
+      "eta": 0.0169564888043774,
       "eval_metric": "rmse",
-      "gamma": 0.00632210320307227,
-      "lambda": 36.5747750427504,
-      "max_depth": 8,
-      "min_child_weight": 2.05492333555331,
-      "nrounds": 2149,
+      "gamma": 0.0174710836971997,
+      "lambda": 52.7128425182702,
+      "max_depth": 9,
+      "min_child_weight": 2.83696084386751,
+      "nrounds": 1935,
       "nthread": 1,
-      "subsample": 0.588091761556807,
+      "subsample": 0.595763908094141,
       "verbose": 0,
       "verbosity": 0,
       "use_pred_offset": true
     },
-    "regr.mse": 1051.51700320984
+    "rank_tuning": 18,
+    "regr.mse": 1027.93984251753,
+    "regr.mse_se": 13.653361368451,
+    "tuning_mse": 1055.47959369638
   },
   "rpf": {
     "param_vals": {
-      "ntrees": 200,
       "max_interaction": 8,
+      "ntrees": 200,
       "splits": 978,
       "split_structure": "leaves",
       "split_try": 4,
@@ -30,6 +33,9 @@
       "split_decay_rate": 0.997405688990129,
       "delete_leaves": false
     },
-    "regr.mse": 1039.75561406574
+    "rank_tuning": 1,
+    "regr.mse": 1005.14409601607,
+    "regr.mse_se": 13.9696775333233,
+    "tuning_mse": 1039.75561406574
   }
 }
