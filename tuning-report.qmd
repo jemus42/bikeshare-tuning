@@ -241,9 +241,9 @@ winner_rank <- reeval_summary[rank_reeval == 1, setNames(rank_tuning, model)]
 ```
 
 ```{r fig-reeval}
-#| fig-cap: "Tuning MSE (3-fold CV) against re-evaluation MSE (10 × 5-fold CV) of the top 20 configurations. Error bars: ±2 naive SE of the re-evaluation mean. Red: re-evaluation winner."
+#| fig-cap: "Tuning MSE (3-fold CV) against re-evaluation MSE (10 × 5-fold CV) of the top 20 configurations. Error bars: ±2 paired SE of the difference to the re-evaluation winner (red)."
 ggplot(reeval_summary, aes(x = tuning_mse, y = reeval_mse)) +
-  geom_errorbar(aes(ymin = reeval_mse - 2 * reeval_se, ymax = reeval_mse + 2 * reeval_se), width = 0, alpha = 0.4) +
+  geom_errorbar(aes(ymin = reeval_mse - 2 * paired_se, ymax = reeval_mse + 2 * paired_se), width = 0, alpha = 0.4) +
   geom_point() +
   geom_point(data = reeval_summary[rank_reeval == 1], color = "#b2182b", size = 3) +
   facet_wrap(vars(model), scales = "free") +
@@ -271,6 +271,29 @@ The re-evaluation winners were tuning ranks
 `r winner_rank[["xgb"]]` (xgboost) and `r winner_rank[["rpf"]]` (rpf).
 Repeated CV iterations share training data, so the naive SEs understate the
 true uncertainty.
+
+```{r model-comparison}
+winners <- reeval[rank_tuning == best_rank, .(model, iteration, regr.mse)]
+model_diff <- dcast(winners, iteration ~ model, value.var = "regr.mse")[, diff := rpf - xgb]
+# Nadeau & Bengio (2003): repeated CV splits overlap, inflate variance by test/train ratio (1/4 for 5-fold)
+model_cmp <- model_diff[, .(
+  mean = mean(diff),
+  se = sd(diff) / sqrt(.N),
+  se_corrected = sd(diff) * sqrt(1 / .N + 1 / 4),
+  rpf_better = mean(diff < 0)
+)]
+```
+
+Both models were re-evaluated on the same splits, so their winners compare
+pairwise: rpf's MSE is
+`r sprintf("%.1f", -model_cmp$mean)` lower, and rpf is better on
+`r sprintf("%.0f%%", 100 * model_cmp$rpf_better)` of the
+`r nrow(model_diff)` splits.
+The naive paired SE is `r sprintf("%.1f", model_cmp$se)`; the
+Nadeau–Bengio corrected SE, which accounts for overlapping training sets, is
+`r sprintf("%.1f", model_cmp$se_corrected)`.
+The same correction applies to all paired SEs above, inflating them about
+`r sprintf("%.1f", model_cmp$se_corrected / model_cmp$se)`-fold.
 
 ## Cost
 
@@ -331,7 +354,21 @@ ratio <- setNames(noise$cv_se / second_half_mse$gain[match(noise$model, second_h
   - The stagnation terminator (200 evaluations without improvement) did not
     fire: the incumbent kept improving in small, noise-sized steps until the
     end.
-- **Either way:** the ranking among top configurations is mostly CV noise and
-  selection bias.
-  Re-evaluating the top 10–20 with repeated CV is a cheaper way to a more
-  reliable pick than more search.
+- **Re-evaluation:** among each model's top 20, tuning order carries little
+  (rpf, Spearman `r sprintf("%.2f", rank_cor[model == "rpf", spearman])`) to no
+  (xgboost, `r sprintf("%.2f", rank_cor[model == "xgb", spearman])`)
+  information.
+  The top 5 per model are within about 2 MSE of each other, at a naive paired SE
+  of 1–1.5 (about 4–5 corrected), so they are interchangeable.
+  An earlier sequential run of the xgboost re-evaluation, differing only in RNG
+  streams, picked tuning rank 4 instead of 18.
+  `best_params.json` holds the re-evaluation winners, but any top-5
+  configuration would do.
+- **rpf vs. xgboost:** rpf is better by about
+  `r sprintf("%.0f", -model_cmp$mean)` MSE
+  (`r sprintf("%.1f%%", 100 * -model_cmp$mean / reeval_summary[model == "xgb", min(reeval_mse)])`),
+  on `r sprintf("%.0f%%", 100 * model_cmp$rpf_better)` of the splits.
+  That is a consistent edge and an order of magnitude larger than the gaps
+  within each model, but only about
+  `r sprintf("%.1f", -model_cmp$mean / model_cmp$se_corrected)` corrected SEs,
+  so not a decisive one.
